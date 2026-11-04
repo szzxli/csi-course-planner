@@ -1223,7 +1223,9 @@ const SEM_ORDER = ["Year 1 Fall","Year 1 Spring","Year 2 Fall","Year 2 Spring","
 function keyFor(prog, titles){
   const list = KEY[prog] || [];
   for (const k of list){
-    if (titles.some(t => t.indexOf(k.code) === 0 || t.indexOf(k.code + " ") >= 0)) return k;
+    // 按完整课号匹配：PSY 1000 不能算成 PSY 100（后面多一位数字就不算）
+    const re = new RegExp('(^|[^A-Z0-9])' + k.code.replace(' ', '\\s+') + '(?![0-9])');
+    if (titles.some(t => re.test(t))) return k;
   }
   return null;
 }
