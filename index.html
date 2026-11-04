@@ -1342,7 +1342,7 @@ document.getElementById('reset').onclick=()=>{ const key='csi-planner-'+current.
 // Richa 已修课（工作簿2.xlsx + 审计说明）：只按课号精确匹配专业组。
 const RICHA_TAKEN = ["PSY 100", "ENG 111", "MTH 231"];
 const RICHA_NOTES = {
-  "PSY": "Richa 已修：PSY 100 ✓（B-，满足 C 要求）· ENG 111 ✓ · MTH 231 是 AP 换的 CR 学分，能不能算满足 PSY 201/266 的 C 要求，须问导师确认。工作簿与 What-If 总数差 6 学分（55 对 61），本页按工作簿课名单算，What-If 的 39 学分仅作对照。",
+  "PSY": "Richa 已修：PSY 100 ✓（B-，满足 C 要求）· ENG 111 ✓ · MTH 231 是 AP 换的 CR 学分，能不能算满足 PSY 201/266 的 C 要求，须问导师确认。以 DegreeWorks 61 学分为准：心理专业已算 6 学分、还差 39；但工作簿课名单里只看得到 PSY 100，另外 3 学分出自哪门课待确认，清单先只勾 PSY 100。",
   "INFOSYS": "Richa 已修课里没有 ISI 专业组：入门编程组未修（CSC 119 只是计算机概念课，不算 CSC 126/140/ISI 140）。ENG 111 ✓；MTH 231 在入门组数学并修档次里，但编程课本身还没修。",
   "ECO": "Richa 已修课里没有经济专业组：ECO 111/112、230、210、212、323 全剩。MTH 231 高于 121/123 档次，但 210/212 先修原文只写 MTH 121 或 123，没写“或更高”，替代与否须问导师确认。"
 };
@@ -1368,7 +1368,7 @@ document.getElementById('richaBtn').onclick=()=>{
 };
 
 
-// 毕业统计：按 Richa 工作簿 55 学分（44 已完成 + 在修 11）为基数算学位缺口；
+// 毕业统计：按 Richa DegreeWorks What-If 61 学分（45 已完成 + 2026 秋季在修 16）为基数算学位缺口；工作簿 55 学分为较早快照，已作废，不再作基数。
 // 专业还剩按清单组数算，1 组 = 1 门课（多选一算 1 门，选修占位组按清单原样算）。
 function parseTotal(s){
   const m = String(s).match(/\d+/g);
@@ -1390,22 +1390,26 @@ function richaMajorRemaining(prog){
 function renderDegree(){
   const box=document.getElementById('degree');
   const rows=["PSY-BS","INFOSYS-BS-CONONE","INFOSYS-BS-CONTWO","ECO-BS","ECO-BS-BUSINESS","ECO-BS-FINANCE"];
-  let html='<div class="prog"><div><div class="prognum">55</div><div class="proglabel">Richa 已算学分（含在修 11）</div></div><div class="proglabel" style="flex:1">离学位总学分还差 = 学位总学分 − 55。<br>在修 11 完成后，新增还需 = 还差 − 11。</div></div>';
-  html+='<div class="ok" style="margin:10px 0"><b>通识 Pathways（42 学分结构，须 DegreeWorks 定最终归类）：</b><br>必修核心 12（ENG 111 + ENG 151、数学、生命/物理科学）· 灵活核心 18（世界文化、美国体验、创意表达、个人与社会、科学世界 + 任选一区，同一学科最多 2 门，科学世界须带实验，灵活 + 学院选项合计至少 6 学分在 200 级以上）· 学院选项（STEM 变体：可用一门 STEM 课替一门 TALA 或社会科学；须含当代世界与多元化主题）。<br>Richa 工作簿标注为通识/必修/灵活核心的已修共 <b>26 学分</b>（ENG 111、ENG 151、MTH 231、CHN 215、CSC 119、MUS 108、PHY 114、FCWG 1000）+ 在修 COR 100（3 学分，美国体验）。粗算通识缺口约 <b>13–16 学分</b>，类别、200 级、实验并修、双重计算四条规则须 DegreeWorks 判定，本页不给假精确数。</div>';
+  let html='<div class="prog"><div><div class="prognum">61</div><div class="proglabel">Richa 已算学分（DegreeWorks What-If：45 已完成 + 2026 秋季在修 16）</div></div><div class="proglabel" style="flex:1">离学位总学分还差 = 学位总学分 − 61。<br>在修 16 完成后，新增还需 = 还差 − 16。</div></div>';
+  html+='<div class="ok" style="margin:10px 0"><b>通识 Pathways（42 学分结构，须 DegreeWorks 定最终归类）：</b><br>必修核心 12（ENG 111 + ENG 151、数学、生命/物理科学）· 灵活核心 18（世界文化、美国体验、创意表达、个人与社会、科学世界 + 任选一区，同一学科最多 2 门，科学世界须带实验，灵活 + 学院选项合计至少 6 学分在 200 级以上）· 学院选项（STEM 变体：可用一门 STEM 课替一门 TALA 或社会科学；须含当代世界与多元化主题）。<br>Richa 工作簿标注为通识/必修/灵活核心的已修共 <b>26 学分</b>（ENG 111、ENG 151、MTH 231、CHN 215、CSC 119、MUS 108、PHY 114、FCWG 1000）+ 在修 COR 100（3 学分，美国体验）。粗算通识缺口约 <b>13–16 学分</b>（工作簿为较早快照，61 学分口径下可能还有未列出的通识课，缺口可能更小），类别、200 级、实验并修、双重计算四条规则须 DegreeWorks 判定，本页不给假精确数。</div>';
   html+='<div style="margin:10px 0">';
   rows.forEach(code=>{
     const prog=DATA.programs.find(x=>x.program===code);
     if(!prog) return;
     const r=richaMajorRemaining(prog);
+    // DegreeWorks What-If 口径（2026-11-03）优先于地图清单：心理 BS 专业已算 6、还差 39；ISI 60；经济 BS 44†（未选方向下限）。
+    const DW_MAJOR = {"PSY-BS": "39 学分（DegreeWorks）", "INFOSYS-BS-CONONE": "60 学分（DegreeWorks，未分方向）", "INFOSYS-BS-CONTWO": "60 学分（DegreeWorks，未分方向）", "ECO-BS": "44 学分†（DegreeWorks，未选方向下限）"};
+    const majorTxt = DW_MAJOR[code] || (r.n+' 门 · '+r.cr+' 学分');
     const [lo,hi]=parseTotal(prog.degree_total_credits_as_stated_in_map);
-    const gapLo=lo-55, gapHi=hi-55;
+    const gapLo=lo-61, gapHi=hi-61;
     const gapTxt = gapLo===gapHi ? gapLo+' 学分' : gapLo+'–'+gapHi+' 学分';
     html+='<div class="card"><div style="flex:1"><div class="code">'+esc(prog.label)+'</div>'+
       '<div class="ttl">学位总学分 '+esc(prog.degree_total_credits_as_stated_in_map)+'</div>'+
-      '<div style="margin-top:4px"><span class="badge gold">专业还剩 '+r.n+' 门 · '+r.cr+' 学分</span><span class="badge">毕业还差 '+gapTxt+'</span></div></div></div>';
+      '<div style="margin-top:4px"><span class="badge gold">专业还剩 '+majorTxt+'</span><span class="badge">毕业还差 '+gapTxt+'</span></div>'+
+      (DW_MAJOR[code] ? '<div class="ttl">地图清单算：'+r.n+' 门 · '+r.cr+' 学分（与 DegreeWorks 差额见下方口径）</div>' : '')+'</div></div>';
   });
   html+='</div>';
-  html+='<details><summary>计数口径（点开看）</summary><p class="meta">1 组 = 1 门课：二选一/三选一的选择组算 1 门；选修占位组按清单原样算，地图页对重复卡片已去重提示。心理 BS 按 Richa 已修 PSY 100 减 3 学分、1 门；ISI 与经济专业组 Richa 一门未修，按地图全量算。经济通用地图列出 40 学分，少于 What-If 的 44 学分下限，地图本身不完整，以 DegreeWorks 为准。ISI 方向一清单 65 学分含重复出现的选择组与 ISI 352 重复卡，实际选课门数少于组数。学位还差只算总学分缺口，不等于专业还剩 + 通识缺口之和（PSY 100 等课可双重计算，通识课也可算选修学分）。</p></details>';
+  html+='<details><summary>计数口径（点开看）</summary><p class="meta">1 组 = 1 门课：二选一/三选一的选择组算 1 门；选修占位组按清单原样算，地图页对重复卡片已去重提示。心理 BS：DegreeWorks 说专业已算 6 学分、还差 39，但工作簿课名单里只看得到 PSY 100（3 学分），另外 3 学分出自哪门课，现有材料里没有，清单打勾仍只勾 PSY 100，地图清单算出 42，差 3 学分待确认。ISI 与经济：DegreeWorks 总数（ISI 60、经济 44†）优先于地图清单（方向一 65、方向二 57、经济通用 40），方向未定、地图不完整是差额主因。经济通用地图列出 40 学分，少于 What-If 的 44 学分下限，地图本身不完整，以 DegreeWorks 为准。ISI 方向一清单 65 学分含重复出现的选择组与 ISI 352 重复卡，实际选课门数少于组数。学位还差只算总学分缺口，不等于专业还剩 + 通识缺口之和（PSY 100 等课可双重计算，通识课也可算选修学分）。</p></details>';
   box.innerHTML=html;
 }
 
