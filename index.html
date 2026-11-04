@@ -60,9 +60,10 @@ button.ghost{padding:8px 12px;border-radius:999px;border:1px solid #c9d2cd;backg
 <div id="richaNote" class="ok" hidden></div>
 <div id="summary" class="prog"></div>
 <details style="margin:10px 0"><summary>数据说明（点开看）</summary><div id="gaps" class="warn" style="margin-top:8px"></div><p class="meta">来源：CSI 各系目录 PDF（2025-09-16），地图标注“2024-PRESENT”，没有确定的目录年份，也没有写专业总学分。学期只是地图放课的位置，不代表那学期一定开课。通识 42 学分不算在专业组里。只有心理学 BS 与 DegreeWorks What-If 对得上（45 学分）。</p></details>
-<div class="tabs"><button id="tabList" class="tabbtn active">勾选清单</button><button id="tabMap" class="tabbtn">选课地图</button></div>
+<div class="tabs"><button id="tabList" class="tabbtn active">勾选清单</button><button id="tabMap" class="tabbtn">选课地图</button><button id="tabDegree" class="tabbtn">毕业统计</button></div>
 <div id="list"></div>
 <div id="map" hidden></div>
+<div id="degree" hidden></div>
 
 <p class="meta">数据嵌在这个文件里，来自 CSI 各系目录 PDF（2025-09-16 版，源数据见 app 文件夹里的 data/catalog-v2.json）。不用登录、不含学生数据、不直连 DegreeWorks。如果某条写着缺组或含糊，那是 PDF 本身的问题，不是猜的 — 不要把它当完整要求表用。</p>
 
@@ -1331,9 +1332,11 @@ function render(){
   const rn=document.getElementById('richaNote');
   if (rn && !rn.hidden){ rn.innerHTML = richaNoteFor(current.program); }
   renderMap(all, saved);
+  if (document.getElementById('degree') && !document.getElementById('degree').hidden){ renderDegree(); }
 }
-document.getElementById('tabList').onclick=()=>{ document.getElementById('list').hidden=false; document.getElementById('map').hidden=true; document.getElementById('tabList').className='tabbtn active'; document.getElementById('tabMap').className='tabbtn'; };
-document.getElementById('tabMap').onclick=()=>{ document.getElementById('list').hidden=true; document.getElementById('map').hidden=false; document.getElementById('tabList').className='tabbtn'; document.getElementById('tabMap').className='tabbtn active'; };
+document.getElementById('tabList').onclick=()=>{ document.getElementById('list').hidden=false; document.getElementById('map').hidden=true; document.getElementById('degree').hidden=true; document.getElementById('tabList').className='tabbtn active'; document.getElementById('tabMap').className='tabbtn'; document.getElementById('tabDegree').className='tabbtn'; };
+document.getElementById('tabMap').onclick=()=>{ document.getElementById('list').hidden=true; document.getElementById('map').hidden=false; document.getElementById('degree').hidden=true; document.getElementById('tabList').className='tabbtn'; document.getElementById('tabMap').className='tabbtn active'; document.getElementById('tabDegree').className='tabbtn'; };
+document.getElementById('tabDegree').onclick=()=>{ document.getElementById('list').hidden=true; document.getElementById('map').hidden=true; document.getElementById('degree').hidden=false; document.getElementById('tabList').className='tabbtn'; document.getElementById('tabMap').className='tabbtn'; document.getElementById('tabDegree').className='tabbtn active'; renderDegree(); };
 document.getElementById('reset').onclick=()=>{ const key='csi-planner-'+current.program; try{ localStorage.removeItem(key); }catch(e){} render(); };
 
 // Richa 已修课（工作簿2.xlsx + 审计说明）：只按课号精确匹配专业组。
@@ -1363,6 +1366,48 @@ document.getElementById('richaBtn').onclick=()=>{
   note.innerHTML = (n ? '已按 Richa 已修课打勾：PSY 100（'+n+' 组）。' : 'Richa 已修课里没有这条专业的组，本页没有新打勾。') + '<br>' + richaNoteFor(current.program);
   render();
 };
+
+
+// 毕业统计：按 Richa 工作簿 55 学分（44 已完成 + 在修 11）为基数算学位缺口；
+// 专业还剩按清单组数算，1 组 = 1 门课（多选一算 1 门，选修占位组按清单原样算）。
+function parseTotal(s){
+  const m = String(s).match(/\d+/g);
+  if (!m) return [0,0];
+  return m.length >= 2 ? [parseInt(m[0],10), parseInt(m[1],10)] : [parseInt(m[0],10), parseInt(m[0],10)];
+}
+function richaMajorRemaining(prog){
+  const groups=[...prog.groups_as_listed_in_map, ...(prog.elective_placeholder_blocks_as_listed_in_map||[])];
+  let n=groups.length, cr=0, taken=0;
+  groups.forEach(g=>{
+    cr += Number(g.credits||0);
+    const re = new RegExp('(^|[^A-Z0-9])PSY\\s+100(?![0-9])');
+    if (prog.program.indexOf('PSY')===0 && g.titles.some(t=>re.test(t))){ taken++; }
+  });
+  let takenCr=0;
+  if (prog.program.indexOf('PSY')===0){ takenCr=3; }
+  return {n: n-taken, cr: cr-takenCr, totalN: n, totalCr: cr};
+}
+function renderDegree(){
+  const box=document.getElementById('degree');
+  const rows=["PSY-BS","INFOSYS-BS-CONONE","INFOSYS-BS-CONTWO","ECO-BS","ECO-BS-BUSINESS","ECO-BS-FINANCE"];
+  let html='<div class="prog"><div><div class="prognum">55</div><div class="proglabel">Richa 已算学分（含在修 11）</div></div><div class="proglabel" style="flex:1">离学位总学分还差 = 学位总学分 − 55。<br>在修 11 完成后，新增还需 = 还差 − 11。</div></div>';
+  html+='<div class="ok" style="margin:10px 0"><b>通识 Pathways（42 学分结构，须 DegreeWorks 定最终归类）：</b><br>必修核心 12（ENG 111 + ENG 151、数学、生命/物理科学）· 灵活核心 18（世界文化、美国体验、创意表达、个人与社会、科学世界 + 任选一区，同一学科最多 2 门，科学世界须带实验，灵活 + 学院选项合计至少 6 学分在 200 级以上）· 学院选项（STEM 变体：可用一门 STEM 课替一门 TALA 或社会科学；须含当代世界与多元化主题）。<br>Richa 工作簿标注为通识/必修/灵活核心的已修共 <b>26 学分</b>（ENG 111、ENG 151、MTH 231、CHN 215、CSC 119、MUS 108、PHY 114、FCWG 1000）+ 在修 COR 100（3 学分，美国体验）。粗算通识缺口约 <b>13–16 学分</b>，类别、200 级、实验并修、双重计算四条规则须 DegreeWorks 判定，本页不给假精确数。</div>';
+  html+='<div style="margin:10px 0">';
+  rows.forEach(code=>{
+    const prog=DATA.programs.find(x=>x.program===code);
+    if(!prog) return;
+    const r=richaMajorRemaining(prog);
+    const [lo,hi]=parseTotal(prog.degree_total_credits_as_stated_in_map);
+    const gapLo=lo-55, gapHi=hi-55;
+    const gapTxt = gapLo===gapHi ? gapLo+' 学分' : gapLo+'–'+gapHi+' 学分';
+    html+='<div class="card"><div style="flex:1"><div class="code">'+esc(prog.label)+'</div>'+
+      '<div class="ttl">学位总学分 '+esc(prog.degree_total_credits_as_stated_in_map)+'</div>'+
+      '<div style="margin-top:4px"><span class="badge gold">专业还剩 '+r.n+' 门 · '+r.cr+' 学分</span><span class="badge">毕业还差 '+gapTxt+'</span></div></div></div>';
+  });
+  html+='</div>';
+  html+='<details><summary>计数口径（点开看）</summary><p class="meta">1 组 = 1 门课：二选一/三选一的选择组算 1 门；选修占位组按清单原样算，地图页对重复卡片已去重提示。心理 BS 按 Richa 已修 PSY 100 减 3 学分、1 门；ISI 与经济专业组 Richa 一门未修，按地图全量算。经济通用地图列出 40 学分，少于 What-If 的 44 学分下限，地图本身不完整，以 DegreeWorks 为准。ISI 方向一清单 65 学分含重复出现的选择组与 ISI 352 重复卡，实际选课门数少于组数。学位还差只算总学分缺口，不等于专业还剩 + 通识缺口之和（PSY 100 等课可双重计算，通识课也可算选修学分）。</p></details>';
+  box.innerHTML=html;
+}
 
 load();
 </script>
