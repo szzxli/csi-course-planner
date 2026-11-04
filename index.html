@@ -5,37 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CSI 选课规划 — 心理学、ISI、经济学（简单版）</title>
 <style>
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:980px;margin:0 auto;padding:20px;line-height:1.6;color:#1e2d2a;background:#f7f6f1}
-h1{font-size:26px} h2{font-size:20px}
-.warn{background:#fff3cd;border:1px solid #d9a400;padding:12px;border-radius:8px}
-.ok{background:#e6f4ea;border:1px solid #2e7d32;padding:12px;border-radius:8px}
-select,button{font-size:16px;padding:8px 10px}
-.card{border:1px solid #c4cec5;background:#fffefa;border-radius:10px;padding:12px;margin:10px 0}
-.card.done{opacity:.75}
-.card.done h3{text-decoration:line-through}
-.meta{color:#5e6d68;font-size:14px}
-label{display:block;cursor:pointer}
-pre{white-space:pre-wrap}
+:root{--ink:#0f2a2d;--gold:#b9975b;--gold2:#8a6d3b;--paper:#f6f3ec;--card:#ffffff;--mut:#6b7a76}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:680px;margin:0 auto;padding:14px 16px 40px;line-height:1.5;color:#1e2d2a;background:var(--paper)}
+.hero{background:linear-gradient(135deg,#0f2a2d,#1d4a44);color:#fff;border-radius:18px;padding:22px 20px 18px;box-shadow:0 10px 30px rgba(15,42,45,.25)}
+.hero h1{font-family:Georgia,serif;font-size:30px;margin:0 0 4px;letter-spacing:.5px}
+.hero p{margin:0;color:#cfe0da;font-size:14px}
+.hero .rule{height:2px;background:var(--gold);width:56px;margin:12px 0;border-radius:2px}
+select{font-size:16px;padding:9px 12px;border-radius:10px;border:1px solid #c9d2cd;background:#fff;width:100%}
+.trackrow{display:flex;gap:10px;align-items:center;margin:14px 0 4px}
+.trackicon{flex:0 0 44px;height:44px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px}
+.tabs{display:flex;gap:8px;margin:14px 0}
+.tabbtn{flex:1;padding:10px;border:1px solid #c9d2cd;background:#fff;color:var(--ink);border-radius:999px;cursor:pointer;font-size:15px}
+.tabbtn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.prog{display:flex;gap:12px;align-items:center;background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 2px 10px rgba(15,42,45,.08)}
+.progbar{flex:1;height:10px;background:#e8e2d4;border-radius:99px;overflow:hidden}
+.progbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#d9b96a);border-radius:99px}
+.prognum{font-family:Georgia,serif;font-size:26px;color:var(--ink)}
+.proglabel{font-size:13px;color:var(--mut)}
+.card{border:1px solid #e2ddd0;background:var(--card);border-radius:14px;padding:11px 13px;margin:9px 0;display:flex;gap:11px;align-items:flex-start;box-shadow:0 1px 4px rgba(15,42,45,.05)}
+.card input{width:22px;height:22px;accent-color:var(--ink);margin-top:2px;flex:0 0 22px}
+.card.done{opacity:.6}
+.card .code{font-size:17px;font-weight:700;color:var(--ink)}
+.card .ttl{font-size:13px;color:var(--mut)}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:#eef2ef;color:#3d554e;margin-right:5px}
+.badge.gold{background:#f7ead0;color:var(--gold2)}
+.keycard{border-left:4px solid var(--gold);background:#fffdf6}
+details{font-size:13px;color:var(--mut)}
+details summary{cursor:pointer;color:var(--ink)}
+.meta{color:var(--mut);font-size:13px}
+.warn{background:#fff8e1;border:1px solid #e8d5a8;padding:10px 12px;border-radius:12px;font-size:13px}
+.ok{background:#eaf3ec;border:1px solid #bcd6c2;padding:10px 12px;border-radius:12px;font-size:13px}
+button.richa{width:100%;padding:11px;border-radius:12px;border:1.5px solid var(--gold);background:#fffdf6;color:var(--gold2);font-size:15px;cursor:pointer}
+button.ghost{padding:8px 12px;border-radius:999px;border:1px solid #c9d2cd;background:#fff;font-size:13px;cursor:pointer}
+.mapgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.sem{border-top:3px solid var(--ink);padding-top:4px}
+.sem h3{margin:6px 0;font-size:15px}
+.mapcard{border:1px solid #e2ddd0;border-radius:12px;padding:9px;margin-bottom:8px;background:#fff;font-size:14px}
+.mapcard.key{border:2px solid var(--gold);background:#fffbeb}
+.keytag{display:inline-block;background:var(--gold);color:#fff;font-size:12px;padding:1px 7px;border-radius:10px;margin-right:6px}
+.mapcard.done{opacity:.6}
+.unlock{font-size:13px;color:#7a5a1e;margin-top:3px}
 </style>
 </head>
 <body>
-<h1>CSI 选课规划 — 简单版</h1>
-<p>纽约市立大学史坦顿岛学院（CUNY CSI）— 心理学、信息系统与信息学（ISI）、经济学。勾选你已经修过的课，APP 会算还剩什么。它<b>不直连 DegreeWorks</b>，也<b>不是官方建议</b>。</p>
-<div class="warn"><b>先读这段 — 数据边界，不是小字。</b><br>
-来源：CSI 各系目录 PDF（2025-09-16 版），地图标注为“2024-PRESENT”。这些 PDF <b>没有印一个确定的目录年份</b>，也<b>没有写专业总学分</b>（汇总栏印的 0 是导出占位符，已忽略）。下面的学期只是地图里<i>放</i>这门课的位置，不代表那学期一定开课。<br>
-<b>只有心理学 BS 交叉核对过：</b>它列出的专业组加起来是 45 学分，和你给的那份 DegreeWorks What-If 排名对得上（还差 39 学分）。其他专业目前只能算“核心课 + 地图顺序、缺口已标出”，做决定前请拿 DegreeWorks 和导师再对一遍。<br>
-通识课（Pathways，共 42 学分：必修核心 12 + 灵活核心 18 + 学院选项 12）<b>不算在</b>下面的专业组里，专业总学分里不含通识。
+<div class="hero">
+<h1>CSI 选课规划</h1>
+<p>心理学 · 信息系统 · 经济学 &nbsp;—&nbsp; 勾选已修，算出还剩什么</p>
+<div class="rule"></div>
+<p>✦ 非官方 · 不直连 DegreeWorks · 正式决定前请和导师对一遍</p>
 </div>
-
-<p>
-<label>选专业方向：
-<select id="track"></select>
-</label>
-<button id="reset">清空我的勾选</button>
-</p>
-
-<div id="summary" class="ok"></div>
-<div id="gaps" class="warn"></div>
+<div class="trackrow"><div class="trackicon" id="trackIcon">◐</div><select id="track"></select></div>
+<div style="display:flex;gap:8px;margin:6px 0 12px"><button id="richaBtn" class="richa">✓ 载入 Richa 已修课</button><button id="reset" class="ghost">清空勾选</button></div>
+<div id="richaNote" class="ok" hidden></div>
+<div id="summary" class="prog"></div>
+<details style="margin:10px 0"><summary>数据说明（点开看）</summary><div id="gaps" class="warn" style="margin-top:8px"></div><p class="meta">来源：CSI 各系目录 PDF（2025-09-16），地图标注“2024-PRESENT”，没有确定的目录年份，也没有写专业总学分。学期只是地图放课的位置，不代表那学期一定开课。通识 42 学分不算在专业组里。只有心理学 BS 与 DegreeWorks What-If 对得上（45 学分）。</p></details>
 <div class="tabs"><button id="tabList" class="tabbtn active">勾选清单</button><button id="tabMap" class="tabbtn">选课地图</button></div>
 <div id="list"></div>
 <div id="map" hidden></div>
@@ -1279,10 +1303,12 @@ function render(){
   let saved={}; try{ saved=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
   let doneCr=0, totalCr=0, doneN=0;
   all.forEach(item=>{ totalCr+=Number(item.g.credits||0); if(saved[item.kind+'-'+item.idx]){ doneCr+=Number(item.g.credits||0); doneN++; } });
+  const pct = totalCr ? Math.round(doneCr/totalCr*100) : 0;
   document.getElementById('summary').innerHTML=
-    '<b>'+esc(current.label)+'</b> — 地图里写的学位总学分：'+esc(current.degree_total_credits_as_stated_in_map)+' 学分。'+
-    '地图标注：'+esc(current.map_name)+', 生效年份栏：'+esc(current.effective_catalog_year_as_printed_in_map)+'.<br>'+
-    '已勾：'+doneN+' / '+all.length+' 组 · '+doneCr+' 学分已勾 · '+(totalCr-doneCr)+' 学分还剩（只算已列出的组，含选修占位组；通识 42 学分另算）。';
+    '<div><div class="prognum">'+pct+'%</div><div class="proglabel">已完成 · 还剩 '+(totalCr-doneCr)+' 学分</div></div>'+
+    '<div class="progbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="proglabel">'+doneN+' / '+all.length+' 组 · 学位总学分（地图所写）'+esc(current.degree_total_credits_as_stated_in_map)+'</div>';
+  document.getElementById('trackIcon').textContent = current.program.indexOf('PSY')===0 ? '🧠' : (current.program.indexOf('INFOSYS')===0 ? '🖧' : '📈');
   document.getElementById('gaps').innerHTML='<b>这条的缺口：</b> '+esc(GAPS[current.program]||current.notes||'');
   const list=document.getElementById('list');
   list.innerHTML='';
@@ -1291,17 +1317,53 @@ function render(){
     const div=document.createElement('div'); div.className='card'+(checked?' done':'');
     const titles=g.titles.join(' <b>OR</b> ');
     const crTxt=(g.credits==null?'学分未在地图里写明':esc(g.credits)+' 学分');
-    div.innerHTML='<label><input type="checkbox" '+(checked?'checked':'')+'> <b>'+esc(item.kind==='elective'?'选修占位组':'专业组')+'</b> — '+titles+' — '+crTxt+'</label>'+
-      '<div class="meta">地图位置： '+esc(g.semester)+(g.min_grade?' · 最低成绩：'+esc(g.min_grade):'')+'</div>'+
-      (g.prerequisite?'<div class="meta">先修要求（按 PDF 原文，英文）： '+esc(g.prerequisite)+'</div>':'');
+    const k0 = keyFor(current.program, g.titles);
+    div.className = 'card' + (k0 ? ' keycard' : '') + (checked ? ' done' : '');
+    const code0 = g.titles[0].split(' - ')[0];
+    div.innerHTML='<input type="checkbox" '+(checked?'checked':'')+'>'+
+      '<div style="flex:1"><div class="code">'+esc(code0)+(k0?' <span class="badge gold">★ 关键前置课</span>':'')+'</div>'+
+      '<div class="ttl">'+titles+'</div>'+
+      '<div style="margin-top:4px"><span class="badge">'+esc(g.semester)+'</span><span class="badge">'+crTxt+'</span>'+(g.min_grade?'<span class="badge">最低 '+esc(g.min_grade)+'</span>':'')+'</div>'+
+      (g.prerequisite?'<details><summary>先修</summary>'+esc(g.prerequisite)+'</details>':'')+'</div>';
     div.querySelector('input').onchange=(e)=>{ saved[id]=e.target.checked; try{ localStorage.setItem(key, JSON.stringify(saved)); }catch(err){} render(); };
     list.appendChild(div);
   });
+  const rn=document.getElementById('richaNote');
+  if (rn && !rn.hidden){ rn.innerHTML = richaNoteFor(current.program); }
   renderMap(all, saved);
 }
 document.getElementById('tabList').onclick=()=>{ document.getElementById('list').hidden=false; document.getElementById('map').hidden=true; document.getElementById('tabList').className='tabbtn active'; document.getElementById('tabMap').className='tabbtn'; };
 document.getElementById('tabMap').onclick=()=>{ document.getElementById('list').hidden=true; document.getElementById('map').hidden=false; document.getElementById('tabList').className='tabbtn'; document.getElementById('tabMap').className='tabbtn active'; };
 document.getElementById('reset').onclick=()=>{ const key='csi-planner-'+current.program; try{ localStorage.removeItem(key); }catch(e){} render(); };
+
+// Richa 已修课（工作簿2.xlsx + 审计说明）：只按课号精确匹配专业组。
+const RICHA_TAKEN = ["PSY 100", "ENG 111", "MTH 231"];
+const RICHA_NOTES = {
+  "PSY": "Richa 已修：PSY 100 ✓（B-，满足 C 要求）· ENG 111 ✓ · MTH 231 是 AP 换的 CR 学分，能不能算满足 PSY 201/266 的 C 要求，须问导师确认。工作簿与 What-If 总数差 6 学分（55 对 61），本页按工作簿课名单算，What-If 的 39 学分仅作对照。",
+  "INFOSYS": "Richa 已修课里没有 ISI 专业组：入门编程组未修（CSC 119 只是计算机概念课，不算 CSC 126/140/ISI 140）。ENG 111 ✓；MTH 231 在入门组数学并修档次里，但编程课本身还没修。",
+  "ECO": "Richa 已修课里没有经济专业组：ECO 111/112、230、210、212、323 全剩。MTH 231 高于 121/123 档次，但 210/212 先修原文只写 MTH 121 或 123，没写“或更高”，替代与否须问导师确认。"
+};
+function richaNoteFor(prog){
+  if (prog.indexOf('PSY')===0) return RICHA_NOTES.PSY;
+  if (prog.indexOf('INFOSYS')===0) return RICHA_NOTES.INFOSYS;
+  return RICHA_NOTES.ECO;
+}
+document.getElementById('richaBtn').onclick=()=>{
+  const key='csi-planner-'+current.program;
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  let n=0;
+  const groups=[...current.groups_as_listed_in_map];
+  groups.forEach((g,i)=>{
+    const re = new RegExp('(^|[^A-Z0-9])PSY\\s+100(?![0-9])');
+    if (g.titles.some(t=>re.test(t))){ saved['major-'+i]=true; n++; }
+  });
+  try{ localStorage.setItem(key, JSON.stringify(saved)); }catch(e){}
+  const note=document.getElementById('richaNote');
+  note.hidden=false;
+  note.innerHTML = (n ? '已按 Richa 已修课打勾：PSY 100（'+n+' 组）。' : 'Richa 已修课里没有这条专业的组，本页没有新打勾。') + '<br>' + richaNoteFor(current.program);
+  render();
+};
+
 load();
 </script>
 </body>
