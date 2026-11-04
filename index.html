@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSI 选课规划 — 心理学、ISI、经济学（简单版）</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:980px;margin:0 auto;padding:20px;line-height:1.6;color:#1e2d2a;background:#f7f6f1}
+h1{font-size:26px} h2{font-size:20px}
+.warn{background:#fff3cd;border:1px solid #d9a400;padding:12px;border-radius:8px}
+.ok{background:#e6f4ea;border:1px solid #2e7d32;padding:12px;border-radius:8px}
+select,button{font-size:16px;padding:8px 10px}
+.card{border:1px solid #c4cec5;background:#fffefa;border-radius:10px;padding:12px;margin:10px 0}
+.card.done{opacity:.75}
+.card.done h3{text-decoration:line-through}
+.meta{color:#5e6d68;font-size:14px}
+label{display:block;cursor:pointer}
+pre{white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>CSI 选课规划 — 简单版</h1>
+<p>纽约市立大学史坦顿岛学院（CUNY CSI）— 心理学、信息系统与信息学（ISI）、经济学。勾选你已经修过的课，APP 会算还剩什么。它<b>不直连 DegreeWorks</b>，也<b>不是官方建议</b>。</p>
+<div class="warn"><b>先读这段 — 数据边界，不是小字。</b><br>
+来源：CSI 各系目录 PDF（2025-09-16 版），地图标注为“2024-PRESENT”。这些 PDF <b>没有印一个确定的目录年份</b>，也<b>没有写专业总学分</b>（汇总栏印的 0 是导出占位符，已忽略）。下面的学期只是地图里<i>放</i>这门课的位置，不代表那学期一定开课。<br>
+<b>只有心理学 BS 交叉核对过：</b>它列出的专业组加起来是 45 学分，和你给的那份 DegreeWorks What-If 排名对得上（还差 39 学分）。其他专业目前只能算“核心课 + 地图顺序、缺口已标出”，做决定前请拿 DegreeWorks 和导师再对一遍。<br>
+通识课（Pathways，共 42 学分：必修核心 12 + 灵活核心 18 + 学院选项 12）<b>不算在</b>下面的专业组里，专业总学分里不含通识。
+</div>
+
+<p>
+<label>选专业方向：
+<select id="track"></select>
+</label>
+<button id="reset">清空我的勾选</button>
+</p>
+
+<div id="summary" class="ok"></div>
+<div id="gaps" class="warn"></div>
+<div id="list"></div>
+
+<p class="meta">数据嵌在这个文件里，来自 CSI 各系目录 PDF（2025-09-16 版，源数据见 app 文件夹里的 data/catalog-v2.json）。不用登录、不含学生数据、不直连 DegreeWorks。如果某条写着缺组或含糊，那是 PDF 本身的问题，不是猜的 — 不要把它当完整要求表用。</p>
+
+<script>
+let DATA=null, current=null;
+const GAPS={
+"PSY-BS":"已核对的核心：列出的组加起来是 45 个专业学分，和 DegreeWorks What-If 的总数对得上。仍需拿 DegreeWorks 按你的入学年份确认目录年份。",
+"PSY-BA":"未达到可直接规划：BA 地图里没有列出 PSY 232/239、241/242、288/342/385 这几组，只列了 5 个选修组。不要默认 BA = BS 减几门，请问导师 / DegreeWorks 确认 BA 里这些组是不是被开放选修代替了。",
+"INFOSYS-BS-CONONE":"缺口已标：PDF 里没解释方向一和方向二的区别。ISI 352 在地图第 4 年秋季出现了两次，这里只算一次。选修组到底要选几组，地图里没写。",
+"INFOSYS-BS-CONTWO":"缺口已标：PDF 里没解释方向一和方向二的区别。CSC 223 组在两个学期语境里都出现，不要重复算。CSC 315 的先修里提到的 CSC 326，在这些地图里从没作为一门课出现过。",
+"ECO-BA":"缺口已标：ECO 111/112 组在第 1 年春季和第 2 年秋季都出现，几乎肯定是两门课（先 111 再 112）被地图版式并成了一组，不是一选一。这里按原样保留，请拿 DegreeWorks 确认。",
+"ECO-BS":"这是通用经济 BS 地图（没写方向）。缺口已标：地图里的核心课加选修组加起来，比 DegreeWorks 还差 44 学分的数要少，所以单看地图不是完整的经济 BS 要求。ECO 111/112 重复问题同上。",
+"ECO-BS-BUSINESS":"Business 方向地图。ECO 111/112 重复问题同上。完整方向清单请拿 DegreeWorks 确认。",
+"ECO-BS-FINANCE":"Finance 方向地图。ECO 111/112 重复问题同上。经济系 PDF 里只找到 Business 和 Finance 两个方向的地图，没找到 General 方向地图 — 通用方向见上面 ECO-BS 那条，并带不完整标记。"
+};
+const EMBEDDED_DATA = {
+  "catalog": "CSI department PDFs, files dated 2025-09-16, maps labelled 2024-PRESENT (see NOTES-v2 for effective-year ambiguity and duplicate maps)",
+  "programs": [
+    {
+      "program": "PSY-BS",
+      "label": "Psychology BS",
+      "source_pdf": "PSYCH.pdf",
+      "map_name": "PSY-BS | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120",
+      "effective_catalog_year_as_printed_in_map": "2022 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "PSY 100 - Psychology"
+          ],
+          "credits": 3.0,
+          "min_grade": "C",
+          "prerequisite": "Pre-requisite: Proficiency in reading and writing."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "PSY 201 - Foundations of Psychological Research"
+          ],
+          "credits": 4.0,
+          "min_grade": "C",
+          "prerequisite": "Prerequisite: Minimum grade of C in PSY 100 and minimum grade of C in MTH 122 or higher (except MTH ). Students will be allowed to repeat the courses, if necessary."
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "PSY 232 - Physiological Psychology: Cognitive and",
+            "PSY 239 - Physiological Psychology: Motivated Behavior"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "PQ PSY 100"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "PSY 266 - Statistics in Psychology"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: Minimum grade of C in PSY 201 and minimum grade of C in MTH 122 or higher (except MTH )."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "PSY 241 - Child Development",
+            "PSY 242 - Lifespan Development"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "PQ ENG 111 AND PSY 100"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "PSY 330 - Experimental Psychology: Cognition and",
+            "PSY 333 - Experimental Psychology: Learning and",
+            "PSY 334 - Experimental Psychology: Social and",
+            "PSY 335 - Experimental Psychology: Child Development"
+          ],
+          "credits": 6.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: minimum grade of C in PSY 266; PSY 288 or PSY 232 or PSY 239. Students cannot receive credit for PSY 330 if they have successfully completed PSY 333, PSY 334 or PSY 335., Pre-requisite: PSY 211 and PSY 266 with a C or better. Students cannot receive credit for PSY 333 if they have successfully completed PSY 330, PSY 334 OR PSY 335., Prerequisites: PSY 212 or PSY 226 and PSY 266 with a minimum grade of C. Students cannot receive credit for PSY 334 if they have successfully completed PSY 330, PSY 333 OR PSY 335., Pre- requisites: PSY 241 or PSY 242 and Minimum grade of C in PSY 266. Students cannot receive credit for PSY 335 if they have successfully completed PSY 330, PSY 333 or PSY 334."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "PSY 288 - Cognitive Psychology",
+            "PSY 342 - Language Development",
+            "PSY 385 - Psychology of Memory"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "PQ ENG 111 AND PSY 100, Prerequisite: PSY 241 or PSY 242., PQ PSY 288 OR PSY 232"
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "PSY 352 - History of Psychology"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: PSY 201"
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map. Named core + select groups sum to 45 credits with electives (see NOTES-v2): core/select 33 + 3x PSY 1000 at 4cr = 45, matching the user DegreeWorks ranking total for PSY BS (39 remaining)."
+    },
+    {
+      "program": "PSY-BA",
+      "label": "Psychology BA",
+      "source_pdf": "PSYCH.pdf",
+      "map_name": "PSY-BA | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120",
+      "effective_catalog_year_as_printed_in_map": "2022 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "PSY 100 - Psychology"
+          ],
+          "credits": 3.0,
+          "min_grade": "C",
+          "prerequisite": "Pre-requisite: Proficiency in reading and writing."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "PSY 201 - Foundations of Psychological Research"
+          ],
+          "credits": 4.0,
+          "min_grade": "C",
+          "prerequisite": "Prerequisite: Minimum grade of C in PSY 100 and minimum grade of C in MTH 122 or higher (except MTH ). Students will be allowed to repeat the courses, if necessary."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "PSY 266 - Statistics in Psychology"
+          ],
+          "credits": 4.0,
+          "min_grade": "C",
+          "prerequisite": "Prerequisite: Minimum grade of C in PSY 201 and minimum grade of C in MTH 122 or higher (except MTH )."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "PSY 330 - Experimental Psychology: Cognition and",
+            "PSY 333 - Experimental Psychology: Learning and",
+            "PSY 334 - Experimental Psychology: Social and",
+            "PSY 335 - Experimental Psychology: Child Development"
+          ],
+          "credits": 6.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: minimum grade of C in PSY 266; PSY 288 or PSY 232 or PSY 239. Students cannot receive credit for PSY 330 if they have successfully completed PSY 333, PSY 334 or PSY 335., PSY 334 or PSY 335., Pre-requisite: PSY 211 and PSY 266 with a C or better. Students cannot receive credit for PSY 333 if they have successfully completed PSY 330, PSY 334 OR PSY 335., Prerequisites: PSY 212 or PSY 226 and PSY 266 with a minimum grade of C. Students cannot receive credit for PSY 334 if they have successfully completed PSY 330, PSY 333 OR PSY 335., Pre- requisites: PSY 241 or PSY 242 and Minimum grade of C in PSY 266. Students cannot receive credit for PSY 335 if they have successfully completed PSY 330, PSY 333 or PSY 334."
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "PSY 352 - History of Psychology"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: PSY 201"
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "PSY 1000 - Psychology Elective Credit"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map lists NO named PSY 232/239, 241/242, 288/342/385 groups; instead it lists 5x PSY 1000 elective blocks. BA major sum from map = 41 (core 21 + 5x4), NOT an official total stated in the PDF. Treat BA as NOT planner-ready until advisor/DegreeWorks confirms whether BA electives are open or named."
+    },
+    {
+      "program": "INFOSYS-BS-CONONE",
+      "label": "Information Systems & Informatics BS, Concentration One",
+      "source_pdf": "CSC.pdf",
+      "map_name": "INFOSYS-BS: CONONE | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "115 - 117",
+      "effective_catalog_year_as_printed_in_map": "2025 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "MGT 110 - Principles of Management"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: ENG 111 and placement into MTH 030 or higher."
+        },
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "CSC 126 - Introduction to Computer Science",
+            "CSC 140 - Computational Problem Solving in Python",
+            "ISI 140 - Computational Problem Solving in Python"
+          ],
+          "credits": 4.0,
+          "min_grade": "C",
+          "prerequisite": "Pre-Requisite or Co- Requisite: MTH 123, MTH 130, MTH 221, MTH 230, MTH 231, or MTH 235. Not open to Engineering majors., Pre-Requisite: Math 20 or an appropriate math placement Year Semester Actual Credits Progress Credits"
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ACC 114 - Introduction to Accounting I"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite; Math 30 and or appropriate math placement and proficiency in reading and writing"
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "BUS 215 - Information Management"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite MGT 110 or ECO 111 OR ECO 112"
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "CSC 226 - Web Database Applications"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: CSC 126 with a grade of C or higher OR CSC/ISI 140 with a grade of C or higher"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ISI 205 - Data Communications and IT Infrastructure"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: MTH 123 (or higher) and BUS 215"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Economic and Managerial"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ISI 300 - Information Structures for Business",
+            "CSC 300 - Information Structures for Business"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: BUS 215 and CSC 126 or CSC/ISI 140. Year Semester Actual Credits Progress Credits 3"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "BUS 160 - Business Law I",
+            "BUS 160 - Business Law I"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ENG 111 and appropriate math placement."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "CSC 315 - Introduction to Database Systems"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 326 or ISI 300"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ISI 315 - Information Security and Risk Management",
+            "ISI 364 - Enterprise Computing Strategies",
+            "ISI 374 - Project Management",
+            "ISI 316 - AI and Business Innovations",
+            "MGT 374 - Project Management"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: BUS 215, Pre-requisite: BUS 215 or ISI/CSC 140 Year Semester Actual Credits Progress Credits"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ISI 352 - Introduction to Systems Analysis"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 315 & ACC 114"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "CSC 223 - Cybersecurity Fundamentals",
+            "CSC 225 - Introduction to Web Development and the",
+            "CSC 245 - Introduction to Data Science",
+            "CSC 421 - Internet Data Communications and Security",
+            "CSC 424 - Advanced Database Systems",
+            "CSC 426 - Applied Cryptography"
+          ],
+          "credits": null,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: CSC 126 with a grade of C or higher OR CSC/ISI 140 with a grade of C or higher, Not open to students who have completed CSC 114. Prerequisites: MTH 123., Prerequisites: CSC 126 or CSC/ISI 140 or CSC 270, Pre-Requisite: CSC 326 with a grade of C or higher or ISI 300 with C or higher., Pre-Requisite: CSC 315, Pre- Requisite: CSC 326 with C or higher OR ISI 300 with C or higher."
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ISI 315 - Information Security and Risk Management",
+            "ISI 334 - Business Intelligence and Analytics",
+            "ISI 364 - Enterprise Computing Strategies",
+            "ISI 374 - Project Management",
+            "ISI 316 - AI and Business Innovations"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: BUS 215, Pre-Requisite: CSC 315 and ECO/MGT 230., Pre-requisite: BUS 215 or ISI/CSC 140"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ISI 352 - Introduction to Systems Analysis"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 315 & ACC 114 Year Semester Actual Credits Progress Credits 4"
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ISI 490 - Project in Information Systems and Informatics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: ISI 352"
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ISI 315 - Information Security and Risk Management",
+            "ISI 364 - Enterprise Computing Strategies",
+            "ISI 374 - Project Management",
+            "ISI 334 - Business Intelligence and Analytics",
+            "ISI 316 - AI and Business Innovations"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: BUS 215, Pre-Requisite: CSC 315 and ECO/MGT 230., Pre-requisite: BUS 215 or ISI/CSC 140"
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [],
+      "notes": "2024-PRESENT map, total degree 115-117 as stated. ISI 352 appears twice in Y4 Fall in the parsed map - treated as one course, duplicate flagged in NOTES-v2. Elective select groups (ISI 315/334/364/374/316 etc.) appear in 3 semesters; count of required electives is NOT stated in the map."
+    },
+    {
+      "program": "INFOSYS-BS-CONTWO",
+      "label": "Information Systems & Informatics BS, Concentration Two",
+      "source_pdf": "CSC.pdf",
+      "map_name": "INFOSYS-BS: CONTWO | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120 - 123",
+      "effective_catalog_year_as_printed_in_map": "2025 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Fall",
+          "titles": [
+            "CSC 126 - Introduction to Computer Science",
+            "CSC 140 - Computational Problem Solving in Python",
+            "ISI 140 - Computational Problem Solving in Python"
+          ],
+          "credits": 4.0,
+          "min_grade": "C",
+          "prerequisite": "Pre-Requisite or Co- Requisite: MTH 123, MTH 130, MTH 221, MTH 230, MTH 231, or MTH 235. Not open to Engineering majors., Pre-Requisite: Math 20 or an appropriate math placement"
+        },
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "MGT 110 - Principles of Management"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: ENG 111 and placement into MTH 030 or higher."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ACC 114 - Introduction to Accounting I"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite; Math 30 and or appropriate math and or appropriate math placement and proficiency in reading and writing"
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "BUS 215 - Information Management"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite MGT 110 or ECO 111 OR ECO 112"
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 111 - Introduction To Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "CSC 226 - Web Database Applications"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: CSC 126 Prerequisite: CSC 126 with a grade of C or higher OR CSC/ISI 140 with a grade of C or higher"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ISI 205 - Data Communications and IT Infrastructure"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: MTH 123 (or higher) and BUS 215"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Economic and Managerial"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ISI 300 - Information Structures for Business"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: BUS 215 and CSC 126 or CSC/ISI 140. Year Semester Actual Credits Progress Credits 3"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "BUS 160 - Business Law I"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ENG 111 and appropriate math placement."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "CSC 315 - Introduction to Database Systems"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 326 or ISI 300"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "CSC 223 - Cybersecurity Fundamentals",
+            "CSC 225 - Introduction to Web Development and the",
+            "CSC 245 - Introduction to Data Science",
+            "CSC 421 - Internet Data Communications and Security",
+            "CSC 424 - Advanced Database Systems",
+            "CSC 426 - Applied Cryptography"
+          ],
+          "credits": null,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: CSC 126 with a grade of C or higher OR CSC/ISI 140 with a grade of C or higher, Not open to students who have completed CSC 114. Prerequisites: MTH 123., Prerequisites: 123., Prerequisites: CSC 126 or CSC/ISI 140 or CSC 270, Pre-Requisite: CSC 326 with a grade of C or higher or ISI 300 with C or higher., Pre-Requisite: CSC 315, Pre- Requisite: CSC 326 with C or higher OR ISI 300 with C or higher."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "CSC 223 - Cybersecurity Fundamentals",
+            "CSC 225 - Introduction to Web Development and the",
+            "CSC 245 - Introduction to Data Science",
+            "CSC 421 - Internet Data Communications and Security",
+            "CSC 424 - Advanced Database Systems",
+            "CSC 426 - Applied Cryptography"
+          ],
+          "credits": null,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: CSC 126 with a grade of C or higher OR CSC/ISI 140 with a grade of C or higher, Not open to students who have completed CSC 114. Prerequisites: MTH 123., Prerequisites: CSC 126 or CSC/ISI 140 or CSC 270, Pre-Requisite: CSC 326 with a grade of C or higher or ISI 300 with C or higher., Pre-Requisite: CSC 315, Pre- Requisite: CSC 326 with C or higher OR ISI 300 with C or higher."
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ISI 352 - Introduction to Systems Analysis"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 315 & ACC 114"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "CSC 421 - Internet Data Communications and Security",
+            "CSC 424 - Advanced Database Systems",
+            "CSC 426 - Applied Cryptography"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: CSC 326 with a grade of C or higher or ISI 300 with C or higher., Pre-Requisite: CSC 315, Pre-Requisite: CSC 326 with C or higher OR ISI 300 with C or higher."
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ISI 315 - Information Security and Risk Management",
+            "ISI 334 - Business Intelligence and Analytics",
+            "ISI 364 - Enterprise Computing Strategies",
+            "ISI 374 - Project Management",
+            "MGT 374 - Project Management"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: BUS 215, Pre-Requisite: CSC 315 and ECO/MGT 230."
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ISI 490 - Project in Information Systems and Informatics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: ISI 352"
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [],
+      "notes": "2024-PRESENT map, total degree 120-123 as stated. CSC 223-group appears in Y3 Spring and again in Y4 Fall contexts; do not double-count without confirmation. Concentration One vs Two difference is NOT explained in the map itself."
+    },
+    {
+      "program": "ECO-BA",
+      "label": "Economics BA",
+      "source_pdf": "ECONOM.pdf",
+      "map_name": "ECO-BA | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120",
+      "effective_catalog_year_as_printed_in_map": "2026 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Managerial and Economic"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141. Year Semester Actual Credits Progress Credits"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 210 - Intermediate Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 111 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 323 - Introduction to Econometrics",
+            "MGT 324 - Introduction to Econometrics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ECO or ECO ; ECO/MGT 230 Year Semester Actual Credits Progress Credits 3"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 212 - Intermediate Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 112 and (MTH 121 or MTH 123)."
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit",
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map, total degree 120 as stated. Named ECO core in map: 111,112,210,212,230,323 plus ECO 1000 elective blocks. ECO 111/112 block appears in both Y1 Spring and Y2 Fall in the parsed map - likely two separate courses (111 then 112) merged by the map layout, NOT a single OR choice; flagged, not resolved."
+    },
+    {
+      "program": "ECO-BS",
+      "label": "Economics BS (no specialization named in map)",
+      "source_pdf": "ECONOM.pdf",
+      "map_name": "ECO-BS | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120 - 124",
+      "effective_catalog_year_as_printed_in_map": "2024 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Economic and Managerial"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 210 - Intermediate Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 111 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 323 - Introduction to Econometrics",
+            "MGT 324 - Introduction to Econometrics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ECO or ECO ; ECO/MGT 230"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 212 - Intermediate Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 112 and (MTH 121 or MTH 123)."
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map, total degree 120-124 as stated. Same ECO 111/112 duplication issue as ECO-BA. Named ECO core + ECO 1000 blocks in map sum to less than the DegreeWorks remaining-44 figure in the user ranking, so the map alone is NOT a complete requirement list for ECO BS."
+    },
+    {
+      "program": "ECO-BS-BUSINESS",
+      "label": "Economics BS, Business specialization",
+      "source_pdf": "ECONOM.pdf",
+      "map_name": "ECO-BS: ECOBUS | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120 - 124",
+      "effective_catalog_year_as_printed_in_map": "2024 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Economic and Managerial"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ACC 114 - Introduction to Accounting I"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite; Math 30 and or appropriate math placement and proficiency in reading and writing"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 210 - Intermediate Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 111 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 323 - Introduction to Econometrics",
+            "MGT 324 - Introduction to Econometrics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ECO or ECO ; ECO/MGT 230"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "MGT 110 - Principles of Management",
+            "MKT 111 - Marketing"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: ENG 111 and placement into MTH 030 or higher. Year Semester Actual Credits Progress Credits 3"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 212 - Intermediate Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 112 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ACC 218 - Introduction to Accounting II"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ACC 114."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 240 - Managerial Finance I",
+            "FNC 240 - Managerial Finance I"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 101 or ECO 111 or ECO 112; Pre or Co-Requisites: ACC 121 and MTH 121 or higher. Year Semester Actual Credits Progress Credits"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "MGT 110 - Principles of Management",
+            "MKT 111 - Marketing"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: ENG 111 and placement into MTH 030 or higher."
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map (ECOBUS), total degree 120-124. Adds ACC 114, ACC 218, ECO/FNC 240, MGT 110/MKT 111 groups versus general ECO-BS map."
+    },
+    {
+      "program": "ECO-BS-FINANCE",
+      "label": "Economics BS, Finance specialization",
+      "source_pdf": "ECONOM.pdf",
+      "map_name": "ECO-BS: ECOFIN | 2024-PRESENT",
+      "degree_total_credits_as_stated_in_map": "120 - 124",
+      "effective_catalog_year_as_printed_in_map": "2024 -",
+      "groups_as_listed_in_map": [
+        {
+          "semester": "Year 1 Spring",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Fall",
+          "titles": [
+            "ECO 111 - Introduction To Microeconomics",
+            "ECO 112 - Introduction to Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre or Co-Requisite: MTH 030 or higher or appropriate math placement."
+        },
+        {
+          "semester": "Year 2 Spring",
+          "titles": [
+            "ECO 230 - Introduction to Economic and Managerial",
+            "MGT 230 - Introduction to Economic and Managerial"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre Requisite: (ECO 101 or ECO 111 or ECO 112) and (MTH 121 or MTH 123 or higher except MTH/SLS 217 and MTH/SLS 218) and (BUS 215 or CSC 115/CSC 117 or CSC 126 or CSC/ISI 140 and CSC/ISI 141."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ACC 114 - Introduction to Accounting I"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite; Math 30 and or appropriate math placement and proficiency in reading and writing"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 210 - Intermediate Microeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 111 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "ECO 323 - Introduction to Econometrics",
+            "MGT 324 - Introduction to Econometrics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ECO or ECO ; ECO/MGT 230"
+        },
+        {
+          "semester": "Year 3 Fall",
+          "titles": [
+            "MGT 110 - Principles of Management",
+            "MKT 111 - Marketing"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: ENG 111 and placement into MTH 030 or higher. Year Semester Actual Credits Progress Credits 3"
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 212 - Intermediate Macroeconomics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 112 and (MTH 121 or MTH 123)."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 213 - Money and Capital Markets",
+            "FNC 213 - Money and Capital Markets"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisites: Proficiency in reading and writing or equivalent; and ECO 101 or (ECO 111 and ECO 112)."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ACC 218 - Introduction to Accounting II"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Pre-requisite: ACC 114."
+        },
+        {
+          "semester": "Year 3 Spring",
+          "titles": [
+            "ECO 240 - Managerial Finance I",
+            "FNC 240 - Managerial Finance I"
+          ],
+          "credits": 3.0,
+          "min_grade": null,
+          "prerequisite": "Pre-Requisite: ECO 101 or ECO 111 or ECO 112; Pre or Co-Requisites: ACC 121 and MTH 121 or higher. Year Semester Actual Credits Progress Credits"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 315 - Monetary Theory and Policy",
+            "ECO 336 - Industrial Organization",
+            "ECO 360 - Investment Analysis",
+            "ECO 370 - International Finance",
+            "FNC 300 - International Finance",
+            "ECO 387 - Managerial Economics"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "Prerequisite: ECO 112 and ECO/MGT 230., Pre-requisite ECO 111 and ECO 230, PQ ECO/FNC 345, ECO/FNC 213, +, PQ ECO/FNC 240, 022259"
+        },
+        {
+          "semester": "Year 4 Fall",
+          "titles": [
+            "ECO 345 - Managerial Finance II",
+            "FNC 345 - Managerial Finance II"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "PQ ECO230/MGT230 & ECO240/FNC"
+        },
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "FNC 350 - Advanced Corporate Finance"
+          ],
+          "credits": 4.0,
+          "min_grade": null,
+          "prerequisite": "PQ ECO/FNC 345"
+        }
+      ],
+      "elective_placeholder_blocks_as_listed_in_map": [
+        {
+          "semester": "Year 4 Spring",
+          "titles": [
+            "ECO 1000 - Economics Elective Credit",
+            "ECO 315 - Monetary Theory and Policy",
+            "ECO 336 - Industrial Organization",
+            "ECO 360 - Investment Analysis",
+            "ECO 370 - International Finance",
+            "FNC 300 - International Finance"
+          ],
+          "credits": 4.0
+        }
+      ],
+      "notes": "2024-PRESENT map (ECOFIN), total degree 120-124. Adds ACC 114, ACC 218, ECO/FNC 240, ECO/FNC 213, ECO/FNC 345, FNC 350, and a Y4 select group (ECO 315/336/360/370/FNC 300/ECO 387) versus general ECO-BS map. No General specialization map was found in the ECONOM PDF (only Business and Finance specialization maps are present)."
+    }
+  ]
+};
+async function load(){
+  DATA=EMBEDDED_DATA;
+  const sel=document.getElementById('track');
+  DATA.programs.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.label+'（'+p.program+'）'; sel.appendChild(o); });
+  sel.onchange=()=>render();
+  render();
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function render(){
+  current=DATA.programs[document.getElementById('track').value];
+  const groups=[...current.groups_as_listed_in_map];
+  const electives=current.elective_placeholder_blocks_as_listed_in_map||[];
+  const all=groups.map((g,i)=>({kind:'major',idx:i,g})).concat(electives.map((g,i)=>({kind:'elective',idx:i,g})));
+  // restore checks from localStorage, keyed by track + index
+  const key='csi-planner-'+current.program;
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  let doneCr=0, totalCr=0, doneN=0;
+  all.forEach(item=>{ totalCr+=Number(item.g.credits||0); if(saved[item.kind+'-'+item.idx]){ doneCr+=Number(item.g.credits||0); doneN++; } });
+  document.getElementById('summary').innerHTML=
+    '<b>'+esc(current.label)+'</b> — 地图里写的学位总学分：'+esc(current.degree_total_credits_as_stated_in_map)+' 学分。'+
+    '地图标注：'+esc(current.map_name)+', 生效年份栏：'+esc(current.effective_catalog_year_as_printed_in_map)+'.<br>'+
+    '已勾：'+doneN+' / '+all.length+' 组 · '+doneCr+' 学分已勾 · '+(totalCr-doneCr)+' 学分还剩（只算已列出的组，含选修占位组；通识 42 学分另算）。';
+  document.getElementById('gaps').innerHTML='<b>这条的缺口：</b> '+esc(GAPS[current.program]||current.notes||'');
+  const list=document.getElementById('list');
+  list.innerHTML='';
+  all.forEach(item=>{
+    const g=item.g, id=item.kind+'-'+item.idx, checked=!!saved[id];
+    const div=document.createElement('div'); div.className='card'+(checked?' done':'');
+    const titles=g.titles.join(' <b>OR</b> ');
+    const crTxt=(g.credits==null?'学分未在地图里写明':esc(g.credits)+' 学分');
+    div.innerHTML='<label><input type="checkbox" '+(checked?'checked':'')+'> <b>'+esc(item.kind==='elective'?'选修占位组':'专业组')+'</b> — '+titles+' — '+crTxt+'</label>'+
+      '<div class="meta">地图位置： '+esc(g.semester)+(g.min_grade?' · 最低成绩：'+esc(g.min_grade):'')+'</div>'+
+      (g.prerequisite?'<div class="meta">先修要求（按 PDF 原文，英文）： '+esc(g.prerequisite)+'</div>':'');
+    div.querySelector('input').onchange=(e)=>{ saved[id]=e.target.checked; try{ localStorage.setItem(key, JSON.stringify(saved)); }catch(err){} render(); };
+    list.appendChild(div);
+  });
+}
+document.getElementById('reset').onclick=()=>{ const key='csi-planner-'+current.program; try{ localStorage.removeItem(key); }catch(e){} render(); };
+load();
+</script>
+</body>
+</html>
